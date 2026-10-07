@@ -2,6 +2,8 @@ from django.shortcuts import get_object_or_404
 from ninja import Router
 from .models import Task
 from .schemas import TaskIn, TaskOut, TaskUpdate
+from .jobs import send_completed_email, send_created_email
+import django_rq
 
 router = Router()
 
@@ -12,6 +14,7 @@ def list_tasks(request):
 @router.post("", response={201: TaskOut})
 def create_task(request, payload: TaskIn):
     task = Task.objects.create(**payload.dict())
+    django_rq.enqueue(send_created_email, task.id)
     return task
 
 @router.get("/{task_id}", response=TaskOut)
@@ -33,6 +36,7 @@ def complete_task(request, task_id: int):
     if task.status != Task.Status.COMPLETED:
         task.status = Task.Status.COMPLETED
         task.save(update_fields=["status"])
+        django_rq.enqueue(send_completed_email, task.id)
     return task
 
 @router.delete("/{task_id}", response={204: None})

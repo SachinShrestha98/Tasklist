@@ -1,0 +1,45 @@
+x-api: &api
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+  restart: unless-stopped
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    REDIS_HOST: redis
+    DB_PATH: /data/db.sqlite3
+    DEBUG: "1"
+  volumes:
+    - db_data:/data
+  depends_on:
+    - redis
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  api:
+    <<: *api
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  worker:
+    <<: *api
+    command: python manage.py rqworker default
+    depends_on:
+      - redis
+      - api
+
+  scheduler:
+    <<: *api
+    command: sh -c "python manage.py schedule_jobs && python manage.py rqscheduler --interval 30"
+    depends_on:
+      - redis
+      - api
+
+
+volumes:
+  db_data:
