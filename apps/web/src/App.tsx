@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { completeTask, createTask, deleteTask, listTasks } from '@/api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { completeTask, createTask, deleteTask, listTasks, updateTask } from '@/api'
 import TaskForm from '@/components/TaskForm'
 import TaskList from '@/components/TaskList'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -9,6 +9,8 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]) 
   const [loading, setLoading] = useState(true) 
   const [error, setError] = useState('') 
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const taskFormRef = useRef<HTMLDivElement>(null)
 
   const loadTasks = useCallback(async () => {
     try {
@@ -27,6 +29,18 @@ export default function App() {
   async function handleCreate(task: TaskInput) {
     await createTask(task)
     await loadTasks()
+  }
+
+  async function handleUpdate(task: TaskInput) {
+    if (!editingTask) return
+    await updateTask(editingTask.id, task)
+    setEditingTask(null)
+    await loadTasks()
+  }
+
+  function handleEdit(task: Task) {
+    setEditingTask(task)
+    taskFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   async function handleComplete(id: number) {
@@ -56,7 +70,14 @@ export default function App() {
       </header>
 
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[360px_1fr]">
-        <TaskForm onSubmit={handleCreate} />
+        <div ref={taskFormRef}>
+          <TaskForm
+            key={editingTask?.id ?? 'new-task'}
+            task={editingTask ?? undefined}
+            onSubmit={editingTask ? handleUpdate : handleCreate}
+            onCancel={editingTask ? () => setEditingTask(null) : undefined}
+          />
+        </div>
 
         <div className="space-y-4">
           {error && (
@@ -68,6 +89,7 @@ export default function App() {
             tasks={tasks}
             loading={loading}
             onComplete={handleComplete}
+            onEdit={handleEdit}
             onDelete={handleDelete}
           />
         </div>

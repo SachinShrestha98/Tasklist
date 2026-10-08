@@ -22,6 +22,7 @@ interface TaskListProps {
   tasks: Task[]
   loading: boolean
   onComplete: (id: number) => void
+  onEdit: (task: Task) => void
   onDelete: (id: number) => void 
 }
 
@@ -39,7 +40,7 @@ function StatusBadge({ task }: { task: Task }) {
   return <Badge variant="secondary">Pending</Badge>
 }
 
-export default function TaskList({ tasks, loading, onComplete, onDelete }: TaskListProps) {
+export default function TaskList({ tasks, loading, onComplete, onEdit, onDelete }: TaskListProps) {
   const pendingCount = tasks.filter((task) => task.status === 'PENDING').length
 
   return (
@@ -95,6 +96,13 @@ export default function TaskList({ tasks, loading, onComplete, onDelete }: TaskL
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onEdit(task)}
+                      >
+                        Edit
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"

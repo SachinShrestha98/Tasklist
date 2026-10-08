@@ -24,6 +24,21 @@ export async function createTask(task: TaskInput): Promise<Task> {
     return response.json()
 }
 
+export async function updateTask(id: number, task: TaskInput): Promise<void> {
+    const response = await fetch(`/api/tasks/${id}/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(task),
+    })
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => null)
+        throw new Error(error?.detail || 'Failed to update task')
+    }
+}
+
 export async function completeTask(id: number): Promise<Task> {
     const response = await fetch(`api/tasks/${id}/complete/`, {
         method: 'POST',

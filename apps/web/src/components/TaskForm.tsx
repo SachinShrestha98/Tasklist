@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import type { TaskInput } from '@/types'
+import type { Task, TaskInput } from '@/types'
 
 type ReminderUnit = 'minutes' | 'hours' | 'days'
  
@@ -27,14 +27,40 @@ const UNIT_MINUTES: Record<ReminderUnit, number> = { minutes: 1, hours: 60, days
 
 interface TaskFormProps {
   onSubmit: (task: TaskInput) => Promise<void>
+  task?: Task
+  onCancel?: () => void
 }
 
 const emptyForm = { header: '', description: '', assignee_email: '', deadline: '' }
 
-export default function TaskForm({ onSubmit }: TaskFormProps) {
-  const [form, setForm] = useState(emptyForm)
-  const [remindAmount, setRemindAmount] = useState('1')
-  const [remindUnit, setRemindUnit] = useState<ReminderUnit>('hours')
+function toLocalDateTime(value: string) {
+  const date = new Date(value)
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return localDate.toISOString().slice(0, 16)
+}
+
+function getInitialForm(task?: Task) {
+  if (!task) return emptyForm
+  return {
+    header: task.header,
+    description: task.description,
+    assignee_email: task.assignee_email,
+    deadline: toLocalDateTime(task.deadline),
+  }
+}
+
+function getInitialReminder(task?: Task) {
+  const minutes = task?.remind_before_minutes ?? 60
+  if (minutes % 1440 === 0) return { amount: String(minutes / 1440), unit: 'days' as const }
+  if (minutes % 60 === 0) return { amount: String(minutes / 60), unit: 'hours' as const }
+  return { amount: String(minutes), unit: 'minutes' as const }
+}
+
+export default function TaskForm({ onSubmit, task, onCancel }: TaskFormProps) {
+  const [form, setForm] = useState(() => getInitialForm(task))
+  const [initialReminder] = useState(() => getInitialReminder(task))
+  const [remindAmount, setRemindAmount] = useState(initialReminder.amount)
+  const [remindUnit, setRemindUnit] = useState<ReminderUnit>(initialReminder.unit)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -65,10 +91,11 @@ export default function TaskForm({ onSubmit }: TaskFormProps) {
   return (
     <Card className="self-start">
       <CardHeader>
-        <CardTitle>New task</CardTitle>
+        <CardTitle>{task ? 'Edit task' : 'New task'}</CardTitle>
         <CardDescription>
-          The assignee gets an email when the task is completed, and a reminder at the time you
-          choose before the deadline.
+          {task
+            ? 'Update the task details and reminder schedule.'
+            : 'The assignee gets an email when the task is completed, and a reminder at the time you choose before the deadline.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -153,9 +180,16 @@ export default function TaskForm({ onSubmit }: TaskFormProps) {
             </Alert>
           )}
 
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? 'Creating...' : 'Create task'}
-          </Button>
+          <div className="flex gap-2">
+            {onCancel && (
+              <Button type="button" variant="outline" className="flex-1" onClick={onCancel} disabled={submitting}>
+                Cancel
+              </Button>
+            )}
+            <Button type="submit" className="flex-1" disabled={submitting}>
+              {submitting ? (task ? 'Saving...' : 'Creating...') : (task ? 'Save changes' : 'Create task')}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
