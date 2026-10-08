@@ -12,6 +12,6 @@ class Command(BaseCommand):
         scheduler = django_rq.get_scheduler("default")
         if JOB_ID in scheduler:
             scheduler.cancel(JOB_ID)
-        cron = os.environ.get("DEADLINE_CRON", "0 * * * *")
+        cron = os.environ.get("DEADLINE_CRON", "* * * * *")
         scheduler.cron(cron, func=check_deadlines, id=JOB_ID, repeat=None)
         self.stdout.write(self.style.SUCCESS(f"Scheduled {JOB_ID} with cron '{cron}'"))

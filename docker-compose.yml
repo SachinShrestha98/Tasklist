@@ -19,6 +19,15 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
 
   api:
     <<: *api
@@ -39,7 +48,6 @@ services:
     depends_on:
       - redis
       - api
-
 
 volumes:
   db_data:
